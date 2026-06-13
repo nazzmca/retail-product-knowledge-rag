@@ -1,31 +1,45 @@
-import streamlit as st
 import sys
-sys.path.insert(0, "../")
+from pathlib import Path
 
-from src.rag.rag_assistant import retrieve_context, generate_answer
+import streamlit as st
 
-st.title("Retail Product Knowledge Assistant")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(PROJECT_ROOT))
 
-question = st.text_input(
-    "Ask a retail policy question"
+from src.rag.rag_assistant import retrieve_context
+
+
+st.title("Retail Product Knowledge RAG Assistant")
+
+st.caption(
+    "Ask questions about retail policies using ChromaDB vector search and document retrieval."
 )
 
+question = st.text_input("Ask a retail policy question")
+
 if question:
-    if len(question.strip()) < 3:
-        st.warning("Please enter a valid question.")
+    cleaned_question = question.strip()
+
+    if len(cleaned_question) < 8 or cleaned_question.isdigit():
+        st.warning("Please enter a proper retail policy question.")
         st.stop()
 
-    try:
-        results = retrieve_context(question, n_results=3)
-        
-        if not results["documents"] or not results["documents"][0]:
-            st.warning("No relevant documents found. Please try a different question.")
-            st.stop()
-        
-        answer = generate_answer(question, results)
-        
-        st.subheader("Answer")
-        st.write(answer)
-        
-    except Exception as e:
-        st.error(f"Error generating answer: {str(e)}")
+    results = retrieve_context(cleaned_question, n_results=1)
+
+    distance = results["distances"][0][0]
+
+    if distance > 0.9:
+        st.warning("I could not find a relevant retail policy answer for this question.")
+        st.stop()
+
+    document = results["documents"][0][0]
+    source = results["metadatas"][0][0]["filename"]
+
+    st.subheader("Answer")
+    st.write(document)
+
+    st.subheader("Source")
+    st.success(f"Source Document: {source}")
+
+    with st.expander("Retrieval details"):
+        st.write(f"Similarity distance: {distance:.4f}")
