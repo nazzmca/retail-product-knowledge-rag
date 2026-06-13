@@ -27,6 +27,9 @@ question = st.text_input(
 )
 
 if question:
+    if len(question.strip()) < 8 or question.strip().isdigit():
+        st.warning("Please enter a proper retail policy question.")
+        st.stop()
 
     query_embedding = model.encode(
         question
