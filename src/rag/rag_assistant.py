@@ -10,7 +10,7 @@ client = chromadb.PersistentClient(path=CHROMA_PATH)
 collection = client.get_collection(name=COLLECTION_NAME)
 
 
-def retrieve_context(question: str, n_results: int = 2):
+def retrieve_context(question: str, n_results: int = 1):
     query_embedding = model.encode(question).tolist()
 
     results = collection.query(
