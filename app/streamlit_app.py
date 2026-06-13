@@ -1,24 +1,8 @@
 import streamlit as st
-import chromadb
-from sentence_transformers import SentenceTransformer
+import sys
+sys.path.insert(0, "../")
 
-CHROMA_PATH = "chroma_db"
-COLLECTION_NAME = "retail_knowledge_base"
-
-@st.cache_resource
-def load_resources():
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-
-    client = chromadb.PersistentClient(path=CHROMA_PATH)
-
-    collection = client.get_collection(
-        name=COLLECTION_NAME
-    )
-
-    return model, collection
-
-
-model, collection = load_resources()
+from src.rag.rag_assistant import retrieve_context, generate_answer
 
 st.title("Retail Product Knowledge Assistant")
 
@@ -27,26 +11,21 @@ question = st.text_input(
 )
 
 if question:
-    if len(question.strip()) < 8 or question.strip().isdigit():
-        st.warning("Please enter a proper retail policy question.")
+    if len(question.strip()) < 3:
+        st.warning("Please enter a valid question.")
         st.stop()
 
-    query_embedding = model.encode(
-        question
-    ).tolist()
-
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=1
-    )
-
-    document = results["documents"][0][0]
-    source = results["metadatas"][0][0]["filename"]
-
-    st.subheader("Answer")
-
-    st.write(document)
-
-    st.subheader("Source")
-
-    st.write(source)
+    try:
+        results = retrieve_context(question, n_results=3)
+        
+        if not results["documents"] or not results["documents"][0]:
+            st.warning("No relevant documents found. Please try a different question.")
+            st.stop()
+        
+        answer = generate_answer(question, results)
+        
+        st.subheader("Answer")
+        st.write(answer)
+        
+    except Exception as e:
+        st.error(f"Error generating answer: {str(e)}")
