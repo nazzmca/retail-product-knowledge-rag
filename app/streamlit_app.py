@@ -19,13 +19,15 @@ st.caption(
     "Ask questions about retail policies using ChromaDB vector search and document retrieval."
 )
 
-question = st.text_input(
-    "Ask a retail policy question",
-    placeholder="Example: How long does express shipping take?",
-    help="Ask about return policy, shipping policy, warranty, refunds, or damaged items.",
-)
+with st.form("policy_search_form"):
+    question = st.text_input(
+        "Ask a retail policy question",
+        placeholder="Example: How long does express shipping take?",
+        help="Ask about return policy, shipping policy, warranty, refunds, or damaged items.",
+    )
+    submitted = st.form_submit_button("Search")
 
-if question:
+if submitted and question:
     cleaned_question = question.strip()
 
     has_alpha = any(char.isalpha() for char in cleaned_question)
@@ -69,14 +71,21 @@ if question:
         st.warning("I could not find a relevant retail policy answer for this question.")
         st.stop()
 
-    document, metadata, distance = relevant_candidates[0]
-    source = metadata["filename"]
+    top_document, top_metadata, top_distance = relevant_candidates[0]
+    top_source = top_metadata["filename"]
 
     st.subheader("Answer")
-    st.write(document)
+    st.write(top_document)
 
     st.subheader("Source")
-    st.success(f"Source Document: {source}")
+    st.success(f"Source Document: {top_source}")
 
     with st.expander("Retrieval details"):
-        st.write(f"Similarity distance: {distance:.4f}")
+        st.write(f"Similarity distance: {top_distance:.4f}")
+        st.markdown("---")
+        st.write("### Top relevant documents")
+        for rank, (document, metadata, distance) in enumerate(relevant_candidates, start=1):
+            st.write(f"**{rank}. {metadata['filename']}** (distance: {distance:.4f})")
+            st.write(document)
+            if rank < len(relevant_candidates):
+                st.write("---")
